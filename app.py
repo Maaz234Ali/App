@@ -23,7 +23,7 @@ app = FastAPI()
 
 # Initialize Firebase Admin SDK
 if not firebase_admin._apps:
-    cred = credentials.Certificate(r"https://github.com/Maaz234Ali/App/blob/main/login-cb7d4-firebase-adminsdk-apvga-d9cac60178.json")
+    cred = credentials.Certificate(r"C:\Users\Lenovo\Desktop\Heroku\login-cb7d4-firebase-adminsdk-apvga-d9cac60178.json")
     firebase_admin.initialize_app(cred, {'storageBucket': 'login-cb7d4.appspot.com'})
 
 # Path to the Tesseract OCR executable
