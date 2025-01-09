@@ -36,8 +36,8 @@ else:
 # Path to the Tesseract OCR executable
 pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
-# Set your OpenAI API key from an environment variable for security
-openai.api_key = os.getenv('OPENAI_API_KEY')  # Ensure OPENAI_API_KEY is set in your environment
+# Set your OpenAI API key directly
+openai.api_key = "sk-0HSd-ecNRhC5Gn7vXqjLFuvWQ4nJRVHVkYEOy7oFLoT3BlbkFJoRmgcLTgTlpIVsHqrnFCR_88nsv7z2TLjwvBBFZkwA"
 
 class ReportRequest(BaseModel):
     file_paths: List[str]
