@@ -14,6 +14,7 @@ from datetime import timedelta
 import logging
 import os
 from typing import List
+import json
 
 # Apply nest_asyncio to handle asynchronous tasks
 nest_asyncio.apply()
@@ -21,10 +22,16 @@ nest_asyncio.apply()
 # Initialize FastAPI
 app = FastAPI()
 
-# Initialize Firebase Admin SDK
-if not firebase_admin._apps:
-    cred = credentials.Certificate(r"C:\Users\Lenovo\Desktop\Heroku\login-cb7d4-firebase-adminsdk-apvga-d9cac60178.json")
-    firebase_admin.initialize_app(cred, {'storageBucket': 'login-cb7d4.appspot.com'})
+# Initialize Firebase Admin SDK using the FIREBASE_JSON environment variable
+firebase_json = os.getenv('FIREBASE_JSON')
+if firebase_json:
+    try:
+        cred = credentials.Certificate(json.loads(firebase_json))
+        firebase_admin.initialize_app(cred, {'storageBucket': 'login-cb7d4.appspot.com'})
+    except Exception as e:
+        raise ValueError(f"Failed to initialize Firebase Admin SDK: {str(e)}")
+else:
+    raise ValueError("FIREBASE_JSON environment variable is not set.")
 
 # Path to the Tesseract OCR executable
 pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
