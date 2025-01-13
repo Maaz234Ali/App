@@ -14,7 +14,6 @@ import requests
 import fitz  # PyMuPDF for handling PDFs
 from firebase_admin import credentials, storage
 import firebase_admin
-from pyngrok import ngrok
 import openai
 
 # Initialize logging
@@ -28,10 +27,23 @@ app = FastAPI()
 
 # Firebase Admin SDK initialization
 if not firebase_admin._apps:
-    cred_path = r"C:\Users\Lenovo\Desktop\Heroku\firebase.json"
-
-    cred = credentials.Certificate(cred_path)
-    firebase_admin.initialize_app(cred, {'storageBucket': 'login-cb7d4.appspot.com'})
+    # Firebase credentials URL from GitHub
+    firebase_json_url = "https://raw.githubusercontent.com/Maaz234Ali/App/main/firebase.json"
+    
+    try:
+        # Download the firebase.json file
+        response = requests.get(firebase_json_url)
+        response.raise_for_status()
+        
+        # Load the JSON content
+        firebase_config = response.json()
+        
+        # Use the credentials from the downloaded JSON
+        cred = credentials.Certificate(firebase_config)
+        firebase_admin.initialize_app(cred, {'storageBucket': 'login-cb7d4.appspot.com'})
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Failed to download firebase.json: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to download firebase.json: {str(e)}")
 
 # Tesseract configuration
 pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
@@ -90,10 +102,8 @@ def summarize_text(text: str) -> str:
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "Summarize medical reports."},
-                {"role": "user", "content": text}
-            ],
+            messages=[{"role": "system", "content": "Summarize medical reports."},
+                      {"role": "user", "content": text}],
             max_tokens=200
         )
         return response.choices[0].message["content"].strip()
@@ -114,5 +124,4 @@ async def summarize_reports(request: ReportRequest):
     return {"summary": "\n\n".join(summaries)}
 
 if __name__ == "__main__":
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
