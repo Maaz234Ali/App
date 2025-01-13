@@ -49,7 +49,7 @@ if not firebase_admin._apps:
 pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
 # OpenAI API Key
-openai.api_key = 'sk-0HSd-ecNRhC5Gn7vXqjLFuvWQ4nJRVHVkYEOy7oFLoT3BlbkFJoRmgcLTgTlpIVsHqrnFCR_88nsv7z2TLjwvBBFZkwA'  # Replace with your OpenAI API key
+openai.api_key = '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'  # Replace with your OpenAI API key
 
 class ReportRequest(BaseModel):
     file_paths: List[str]
