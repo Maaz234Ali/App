@@ -36,7 +36,8 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred, {'storageBucket': os.getenv("FIREBASE_STORAGE_BUCKET", "")})
 
 # Tesseract configuration
-pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
+# Updated path for Heroku environment
+pytesseract.pytesseract.tesseract_cmd = '/app/.apt/usr/bin/tesseract'
 
 # OpenAI API Key
 openai.api_key = os.getenv("OPENAI_API_KEY", "")
@@ -128,7 +129,4 @@ async def summarize_reports(request: ReportRequest):
 
 
 if __name__ == "__main__":
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-
