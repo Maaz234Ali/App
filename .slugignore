@@ -1,12 +1,10 @@
-# Exclude unnecessary files and folders
-.git
-node_modules
-__pycache__
-*.log
-*.tmp
-docs/
+.git/
+node_modules/
 tests/
+__pycache__/
+docs/
 .vscode/
 .idea/
+*.log
+*.tmp
 *.pyc
-.DS_Store
