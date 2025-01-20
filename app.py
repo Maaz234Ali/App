@@ -96,7 +96,6 @@ def extract_text_from_image(image: Image.Image) -> str:
         raise HTTPException(status_code=500, detail=f"Error in OCR: {str(e)}")
 
 
-
 def summarize_text(text: str) -> str:
     """Summarize the extracted text using OpenAI."""
     if not text.strip():
@@ -112,11 +111,10 @@ def summarize_text(text: str) -> str:
             max_tokens=200
         )
         return response['choices'][0]['message']['content'].strip()  # Corrected key access
-    except openai.error.OpenAIError as e:  # Catch OpenAI-specific errors
+    except openai.OpenAIError as e:  # Corrected exception handling
         raise HTTPException(status_code=500, detail=f"OpenAI Error: {str(e)}")
     except Exception as e:  # General error handling
         raise HTTPException(status_code=500, detail=f"Error in summarizing text: {str(e)}")
-
 
 
 @app.post("/summarize_reports")
@@ -135,4 +133,3 @@ async def summarize_reports(request: ReportRequest):
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
-
