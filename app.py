@@ -96,12 +96,16 @@ def extract_text_from_image(image: Image.Image) -> str:
         raise HTTPException(status_code=500, detail=f"Error in OCR: {str(e)}")
 
 
+import openai
+from fastapi import HTTPException
+
 def summarize_text(text: str) -> str:
     """Summarize the extracted text using OpenAI."""
     if not text.strip():
         return "No text provided for summarization."
+    
     try:
-        response = openai.ChatCompletion.create(
+        response = openai.ChatCompletion.chat(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "Summarize medical reports."},
@@ -109,9 +113,10 @@ def summarize_text(text: str) -> str:
             ],
             max_tokens=200
         )
-        return response.choices[0].message["content"].strip()
+        return response['choices'][0]['message']['content'].strip()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error in summarizing text: {str(e)}")
+
 
 
 @app.post("/summarize_reports")
