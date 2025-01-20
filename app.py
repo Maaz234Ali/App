@@ -96,8 +96,6 @@ def extract_text_from_image(image: Image.Image) -> str:
         raise HTTPException(status_code=500, detail=f"Error in OCR: {str(e)}")
 
 
-import openai
-from fastapi import HTTPException
 
 def summarize_text(text: str) -> str:
     """Summarize the extracted text using OpenAI."""
@@ -114,9 +112,12 @@ def summarize_text(text: str) -> str:
             max_tokens=200
         )
         return response['choices'][0]['message']['content'].strip()
+    except openai.error.OpenAIError as e:
+        # Log OpenAI-specific error details
+        raise HTTPException(status_code=500, detail=f"OpenAI Error: {str(e)}")
     except Exception as e:
+        # General error handling
         raise HTTPException(status_code=500, detail=f"Error in summarizing text: {str(e)}")
-
 
 
 @app.post("/summarize_reports")
