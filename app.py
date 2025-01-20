@@ -103,7 +103,7 @@ def summarize_text(text: str) -> str:
         return "No text provided for summarization."
     
     try:
-        response = openai.ChatCompletion.chat(
+        response = openai.ChatCompletion.create(  # Corrected method from `.chat` to `.create`
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "Summarize medical reports."},
@@ -111,13 +111,12 @@ def summarize_text(text: str) -> str:
             ],
             max_tokens=200
         )
-        return response['choices'][0]['message']['content'].strip()
-    except openai.error.OpenAIError as e:
-        # Log OpenAI-specific error details
+        return response['choices'][0]['message']['content'].strip()  # Corrected key access
+    except openai.error.OpenAIError as e:  # Catch OpenAI-specific errors
         raise HTTPException(status_code=500, detail=f"OpenAI Error: {str(e)}")
-    except Exception as e:
-        # General error handling
+    except Exception as e:  # General error handling
         raise HTTPException(status_code=500, detail=f"Error in summarizing text: {str(e)}")
+
 
 
 @app.post("/summarize_reports")
