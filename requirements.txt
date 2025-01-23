@@ -16,5 +16,5 @@ typing_extensions==4.12.2
 uvicorn==0.34.0
 PyMuPDF==1.25.1
 nest-asyncio==1.6.0
-openai>=1.0.0
+openai>=0.27.8
 pdf2image
