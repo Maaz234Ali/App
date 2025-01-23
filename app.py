@@ -36,7 +36,6 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred, {'storageBucket': os.getenv("FIREBASE_STORAGE_BUCKET", "")})
 
 # Tesseract configuration
-# Updated path for Heroku environment
 pytesseract.pytesseract.tesseract_cmd = '/app/.apt/usr/bin/tesseract'
 
 # OpenAI API Key
@@ -51,10 +50,13 @@ class ReportRequest(BaseModel):
 
 def generate_signed_url(file_path: str) -> str:
     """Generate a signed URL for a Firebase Storage file."""
-    bucket = storage.bucket()
-    blob = bucket.blob(file_path)
-    signed_url = blob.generate_signed_url(timedelta(minutes=15))
-    return signed_url
+    try:
+        bucket = storage.bucket()
+        blob = bucket.blob(file_path)
+        signed_url = blob.generate_signed_url(timedelta(minutes=15))
+        return signed_url
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating signed URL: {str(e)}")
 
 
 def download_file_from_firebase(firebase_path: str) -> bytes:
@@ -102,15 +104,18 @@ def summarize_text(text: str) -> str:
         return "No text provided for summarization."
     
     try:
-        response = openai.Completion.create(  # Using updated API method
-            model="gpt-3.5-turbo",
-            prompt=f"Summarize the following medical report:\n{text}",
+        response = openai.ChatCompletion.create(  # Updated method
+            model="gpt-3.5-turbo",  # Specify the correct model
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": f"Summarize the following medical report:\n{text}"}
+            ],
             max_tokens=200
         )
-        return response['choices'][0]['text'].strip()  # Corrected response access
-    except openai.OpenAIError as e:  # Catch OpenAI-specific errors
+        return response['choices'][0]['message']['content'].strip()
+    except openai.OpenAIError as e:
         raise HTTPException(status_code=500, detail=f"OpenAI Error: {str(e)}")
-    except Exception as e:  # General error handling
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error in summarizing text: {str(e)}")
 
 
