@@ -84,7 +84,7 @@ def extract_text_from_file(file_bytes: bytes, file_extension: str) -> str:
     return extracted_text.strip()
 
 def summarize_text(text: str) -> str:
-    """Generate a structured summary of the extracted text using OpenAI GPT-4."""
+    """Generate a text-based summary of the extracted text using OpenAI GPT-4."""
     if not text.strip():
         return "No text provided for summarization."
     
@@ -92,52 +92,26 @@ def summarize_text(text: str) -> str:
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are an expert medical report analyst. Extract and structure the medical report data strictly in JSON format without adding any extra commentary or explanations."},
+                {"role": "system", "content": "You are an expert medical report analyst. Provide a concise, well-structured text summary of the given medical report."},
                 {"role": "user", "content": f"""
                     Medical Report:
                     {text}
 
                     Tasks:
-                    1. Extract all patient details, test names, results, and reference ranges.
-                    2. Include all dates found in the report.
-                    3. Preserve original data format, ensuring nothing is left out.
-                    4. Strictly return the output in JSON format without adding any additional text.
+                    1. Summarize the report concisely in text format.
+                    2. Highlight key patient details, important test results, and any significant findings.
+                    3. Use bullet points for readability.
+                    4. Analyse the full report and give advice to the patient on thier report result
 
-                    Output format example:
-                    {{
-                        "Patient Details": {{
-                            "FullName": "...",
-                            "Med. Number": "...",
-                            "Phone": "...",
-                            "Email": "..."
-                        }},
-                        "Test Results": [
-                            {{
-                                "Test Name": "...",
-                                "Result": "...",
-                                "Reference Range": "..."
-                            }}
-                        ],
-                        "Dates": ["..."],
-                        "Summary": "...",
-                        "Analysis": "..."
-                    }}
+               
                 """}
             ],
-            max_tokens=1500,
+            max_tokens=1000,
             temperature=0.3
         )
         
-        # Ensure only JSON is returned
-        raw_response = response.choices[0].message['content'].strip()
-        
-        # Extract JSON part if needed
-        json_start = raw_response.find("{")
-        json_end = raw_response.rfind("}") + 1
-        json_response = raw_response[json_start:json_end]
+        return response.choices[0].message['content'].strip()
 
-        return json_response
-    
     except Exception as e:
         return f"Error in summarizing text: {str(e)}"
 
