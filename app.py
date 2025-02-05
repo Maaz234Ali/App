@@ -101,7 +101,9 @@ def summarize_text(text: str) -> str:
                     1. Summarize the report concisely in text format.
                     2. Highlight key patient details, important test results, and any significant findings.
                     3. Use bullet points for readability.
-                    4. Analyse the full report and give advice to the patient on thier report result
+                    4. Mention the condition of the patient (good, fair, serious, critical, or undetermined) on the basis of report
+                    5. Give advice to the patient on thier condition with respect to report 
+                    
 
                
                 """}
