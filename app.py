@@ -47,60 +47,78 @@ class ReportRequest(BaseModel):
     file_paths: List[str]
 
 def generate_signed_url(file_path: str) -> str:
-    """Generate a signed URL for a Firebase Storage file."""
-    try:
-        bucket = storage.bucket()
-        blob = bucket.blob(file_path)
-        return blob.generate_signed_url(timedelta(minutes=15))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating signed URL: {str(e)}")
+    """Generate a signed URL to access the file from Firebase Storage."""
+    bucket = storage.bucket()
+    blob = bucket.blob(file_path)
+    return blob.generate_signed_url(timedelta(minutes=15))
 
 def download_file_from_firebase(firebase_path: str) -> bytes:
-    """Download a file from Firebase Storage."""
-    try:
-        signed_url = generate_signed_url(firebase_path)
-        response = requests.get(signed_url)
-        response.raise_for_status()
+    """Download the file from Firebase Storage using a signed URL."""
+    signed_url = generate_signed_url(firebase_path)
+    response = requests.get(signed_url)
+    if response.status_code == 200:
         return response.content
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Failed to download file: {str(e)}")
+    else:
+        raise HTTPException(status_code=response.status_code, detail="Failed to download file from Firebase.")
 
-def extract_text_from_pdf(pdf_bytes: bytes) -> str:
-    """Extract text from PDF, using OCR if needed."""
-    pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
+def extract_text_from_file(file_bytes: bytes, file_extension: str) -> str:
+    """Extract text from PDFs and image files using OCR."""
     extracted_text = ""
-    for page in pdf_document:
-        extracted_text += page.get_text("text") + "\n"
-        if not extracted_text.strip():
-            pix = page.get_pixmap()
-            img = Image.open(io.BytesIO(pix.tobytes("png")))
-            extracted_text += pytesseract.image_to_string(img, lang="eng") + "\n"
+
+    if file_extension == '.pdf':
+        pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
+        for page in pdf_document:
+            page_text = page.get_text("text")
+            extracted_text += page_text + "\n"
+            
+            # If no text is found, perform OCR on the page image
+            if not page_text.strip():
+                pix = page.get_pixmap()
+                img = Image.open(io.BytesIO(pix.tobytes("png")))
+                extracted_text += pytesseract.image_to_string(img, lang="eng") + "\n"
+
+    elif file_extension in ['.png', '.jpg', '.jpeg']:
+        img = Image.open(io.BytesIO(file_bytes))
+        extracted_text = pytesseract.image_to_string(img, lang="eng")
+    
     return extracted_text.strip()
 
 def summarize_text(text: str) -> str:
-    """Summarize the extracted text using OpenAI with a structured prompt."""
+    """Generate a structured summary of the extracted text using OpenAI GPT-4."""
     if not text.strip():
         return "No text provided for summarization."
+    
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are an expert medical report analyst."},
+                {"role": "system", "content": "You are an expert medical report analyst. Extract and structure the medical report data strictly in JSON format without adding any extra commentary or explanations."},
                 {"role": "user", "content": f"""
                     Medical Report:
                     {text}
-                    
+
                     Tasks:
                     1. Extract all patient details, test names, results, and reference ranges.
                     2. Include all dates found in the report.
                     3. Preserve original data format, ensuring nothing is left out.
-                    4. Summarize findings in a structured JSON format.
+                    4. Strictly return the output in JSON format without adding any additional text.
 
-                    Output format (structured JSON):
+                    Output format example:
                     {{
-                        "Patient Details": {{...}},
-                        "Test Results": [...],
-                        "Dates": [...],
+                        "Patient Details": {{
+                            "FullName": "...",
+                            "Med. Number": "...",
+                            "Phone": "...",
+                            "Email": "..."
+                        }},
+                        "Test Results": [
+                            {{
+                                "Test Name": "...",
+                                "Result": "...",
+                                "Reference Range": "..."
+                            }}
+                        ],
+                        "Dates": ["..."],
                         "Summary": "...",
                         "Analysis": "..."
                     }}
@@ -109,20 +127,41 @@ def summarize_text(text: str) -> str:
             max_tokens=1500,
             temperature=0.3
         )
-        return response["choices"][0]["message"]["content"].strip()
-    except openai.OpenAIError as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI Error: {str(e)}")
+        
+        # Ensure only JSON is returned
+        raw_response = response.choices[0].message['content'].strip()
+        
+        # Extract JSON part if needed
+        json_start = raw_response.find("{")
+        json_end = raw_response.rfind("}") + 1
+        json_response = raw_response[json_start:json_end]
+
+        return json_response
+    
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error in summarizing text: {str(e)}")
+        return f"Error in summarizing text: {str(e)}"
 
 @app.post("/summarize_reports")
-async def summarize_reports(request: ReportRequest):
+async def summarize_reports(report_request: ReportRequest):
+    """Process PDF and image reports, extract text, and generate summaries."""
     summaries = []
-    for path in request.file_paths:
-        file_bytes = download_file_from_firebase(path)
-        text = extract_text_from_pdf(file_bytes) if path.endswith(".pdf") else ""
-        logging.info(f"Extracted text from {path}: {text[:500]}...")
-        summaries.append(summarize_text(text))
+
+    for file_path in report_request.file_paths:
+        file_bytes = download_file_from_firebase(file_path)
+        
+        # Get file extension
+        file_extension = file_path.lower().split('.')[-1]
+        file_extension = f".{file_extension}"  # Convert to ".pdf", ".png", etc.
+
+        # Extract text based on file type
+        extracted_text = extract_text_from_file(file_bytes, file_extension)
+        
+        logging.info(f"Extracted text from {file_path}: {extracted_text[:500]}...")
+
+        # Summarize extracted text
+        summary = summarize_text(extracted_text)
+        summaries.append(summary)
+
     return {"summary": "\n\n".join(summaries)}
 
 if __name__ == "__main__":
